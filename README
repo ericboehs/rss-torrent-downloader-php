@@ -1,0 +1,7 @@
+This php program will check the feeds in feeds.txt (1 feed per line) and download the torrent files enclosed in each feed item.  It will then update lastDownload.txt to indicate the last Season/Episode downloaded.
+
+Schedule an at or cron job to run this at your choosing and have a torrent client watch the directory you specify, and all your shows will automatically download when available.
+
+Currently only works with feeds from http://tvrss.net.
+
+Two example shows were left in lastDownload.txt and feeds.txt.
