@@ -1,2 +1,4 @@
 http://tvrss.net/search/index.php?distribution_group=eztv&show_name=Family+Guy&filename=&date=&quality=&release_group=LOL&mode=rss
 http://tvrss.net/search/index.php?distribution_group=combined&show_name=Heroes&show_name_exact=true&filename=&date=&quality=720P%7CHDTV&release_group=&mode=rss
+http://tvrss.net/search/index.php?distribution_group=eztv&show_name=South+Park&show_name_exact=true&filename=&date=&quality=&release_group=&mode=rss
+http://tvrss.net/search/index.php?distribution_group=eztv&show_name=Battlestar+Galactica&show_name_exact=true&filename=&date=&quality=720P%7CHDTV&release_group=&mode=rss

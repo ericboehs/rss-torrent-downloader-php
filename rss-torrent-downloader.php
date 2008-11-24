@@ -99,6 +99,7 @@ function parseXML($data, $lastDownloadSeason = NULL, $lastDownloadEpisode = NULL
   $epguide = explode("\n",$epguide);
 
   $itemsInFeed = count($xmlarray['RSS'][0]['CHANNEL'][0]['ITEM']);
+
   $entryNumber = 0;
   $endwhile = true;
   while($entryNumber < $itemsInFeed && $endwhile){
@@ -109,7 +110,10 @@ function parseXML($data, $lastDownloadSeason = NULL, $lastDownloadEpisode = NULL
     $showTitle = $showTitle[1];
     $season = explode(': ', $description[2]);
     $season = $season[1];
-    if(!isset($latestSeason)) $latestSeason = $season;
+    if(!isset($lastDownloadSeason) || !is_numeric($lastDownloadSeason) || !is_numeric($lastDownloadEpisode)){
+      $lastDownloadSeason = $season;
+      $lastDownloadEpisode = "00";
+    }
     $episode = explode(': ', $description[3]);
     $episode = $episode[1];
     if(strlen($episode) < 2){
@@ -124,27 +128,33 @@ function parseXML($data, $lastDownloadSeason = NULL, $lastDownloadEpisode = NULL
       $showTitle = explode("<",$showTitle[1]);
       $showTitle = $showTitle[0];
     }
+    $seasonPadded = $season;
+    $episodePadded = $episode;
     if(strlen($season) < 2)
       $seasonPadded = "0".$season;
     if(strlen($episode) < 2)
       $episodePadded = "0".$episode;
     if($seasonPadded <= $lastDownloadSeason && $episodePadded <= $lastDownloadEpisode) $endwhile = false;
-    if($season == $latestSeason && $endwhile == true){
+    if($season == $lastDownloadSeason && $endwhile == true){
       $result[$entryNumber]['url'] = $url;
       $result[$entryNumber]['showName'] = $showName;
+      $result[$entryNumber]['season'] = $season;
+      $result[$entryNumber]['episode'] = $episode;
       if(strlen($season) < 2)
         $result[$entryNumber]['season'] = "0".$season;
       if(strlen($episode) < 2)
         $result[$entryNumber]['episode'] = "0".$episode;
       $result[$entryNumber]['showTitle'] = $showTitle;
     }
+
+    //echo $showName." - ".$season.$episode." - ".$showTitle."\n";
     $entryNumber++;
   }
+  //print_r($xmlarray);
   return $result;
 }
 
-function checkForUpdate($rssURL, $lastDownloadSeason, $lastDownloadEpisode, $downloadLocation){
-  $episodesToDownload = parseXML(fetchURLContents($rssURL), $lastDownloadSeason, $lastDownloadEpisode);
+function checkForUpdate($episodesToDownload, $downloadLocation){
   if(!$episodesToDownload) return false;
   else {
     foreach($episodesToDownload as $episodeToDownload){
@@ -165,17 +175,24 @@ $showsToGetFile = 'feeds.txt';
 $lastDownloadFile = 'lastDownload.txt';
 $downloadLocation = '/Users/ericboehs/Downloads/';
 
-$lastDownloadFileContents = file($lastDownloadFile); //Get the Last Downloaded season/episode into an array
-$showsToGetFileContents = file($showsToGetFile); //Get the show feeds into an array
+$lastDownloadFileContents = file($lastDownloadFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES); //Get the Last Downloaded season/episode into an array
+$showsToGetFileContents = file($showsToGetFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES); //Get the show feeds into an array
 
 foreach($lastDownloadFileContents as $lastDownloadThisFeed){ //Loop through the last files downloaded for each feed and seperate the season and episode into an array
   $lastDownloadThisFeedArray[] = explode(" ", $lastDownloadThisFeed);
 }
 
 foreach($showsToGetFileContents as $feed => $feedURL){ //Loop through each feed and check/update each feed
-  $lastDownloadFileThisFeed = checkForUpdate($feedURL, $lastDownloadThisFeedArray[$feed][0], $lastDownloadThisFeedArray[$feed][1], $downloadLocation);
-  if(!$lastDownloadFileThisFeed) $lastDownloadFileContentsNew .= $lastDownloadFileContents[$feed];
-  else $lastDownloadFileContentsNew .= $lastDownloadFileThisFeed['season']." ".$lastDownloadFileThisFeed['episode']."\n";
+  $lastDownloadFileThisFeed = checkForUpdate(parseXML(fetchURLContents($feedURL), $lastDownloadThisFeedArray[$feed][0], $lastDownloadThisFeedArray[$feed][1]), $downloadLocation);
+  if(!$lastDownloadFileThisFeed){
+    $lastDownloadFileContentsNew .= $lastDownloadFileContents[$feed]."\n";
+  }else{
+    if(trim($lastDownloadFileContents[$feed]) == ""){
+      $lastDownloadFileContentsNew .= $lastDownloadFileThisFeed['season']." ".$lastDownloadFileThisFeed['episode']."\n";
+    }else{
+      $lastDownloadFileContentsNew .= $lastDownloadFileThisFeed['season']." ".$lastDownloadFileThisFeed['episode']."\n";
+    }
+  }
 }
 
 file_put_contents($lastDownloadFile, $lastDownloadFileContentsNew); //Update the lastDownload.txt file with the latest season/episode that you just downloaded.
