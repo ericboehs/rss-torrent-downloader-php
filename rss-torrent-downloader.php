@@ -187,18 +187,18 @@ class Torrent{
     $comment,
     $private,
     $md5sum,
-    $filename,
+    $data,
     $infoHash,
     $totalSize,
     $modifiedBy,
     $error = false;
 
-  function Torrent($filename){
+  function Torrent($data){
     // Keep this info for reference later
-    $this->filename = $filename;
+    $this->data = $data;
 
     // The entire contents of a torrent file should form into a dictionary object, which will be used to get all our info.
-    $reader = new BEncodeReader($filename);
+    $reader = new BEncodeReader($data);
     $torrentInfo = $reader->readNext();
 
     // In the case of an invalid torrent file the result of the readNext call will be "false".
@@ -329,14 +329,22 @@ function checkForUpdate($episodesToDownload, $downloadLocation){
   if(!$episodesToDownload) return false;
   else {
     foreach($episodesToDownload as $episodeToDownload){
-        touch($downloadLocation.$episodeToDownload['showName'].' - S'.$episodeToDownload['season'].'E'.$episodeToDownload['episode'].' - '.$episodeToDownload['showTitle'].".torrent");
-        $ch = curl_init($episodeToDownload['url']);
-        $fp = fopen($downloadLocation.$episodeToDownload['showName'].' - S'.$episodeToDownload['season'].'E'.$episodeToDownload['episode'].' - '.$episodeToDownload['showTitle'].".torrent", "w");
-        curl_setopt($ch, CURLOPT_FILE, $fp);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_exec($ch);
-        curl_close($ch);
-        fclose($fp);
+      $ch = curl_init($episodeToDownload['url']);
+      if (!$ch)	die( "Cannot allocate a new PHP-CURL handle" );
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+      curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
+      $data = curl_exec($ch);
+      curl_close($ch);
+      file_put_contents($downloadLocation.$episodeToDownload['showName'].' - S'.$episodeToDownload['season'].'E'.$episodeToDownload['episode'].' - '.$episodeToDownload['showTitle'].".torrent", $data); 
+      $torrent = new Torrent($data);
+      //print_r($torrent);
+      if(isset($torrent->files)){
+        foreach($torrent->files as $file){
+          print "Downloaded: ".$file->name."\n";
+        }
+      }else{
+        print "Downloaded: ".$torrent->name."\n";
+      }
     }
     return $episodesToDownload[0];
   }
@@ -346,8 +354,9 @@ $showsToGetFile = 'feeds.txt';
 $lastDownloadFile = 'lastDownload.txt';
 $downloadLocation = '/Users/ericboehs/Downloads/';
 
-$lastDownloadFileContents = file($lastDownloadFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES); //Get the Last Downloaded season/episode into an array
-$showsToGetFileContents = file($showsToGetFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES); //Get the show feeds into an array
+if(file_exists($lastDownloadFile)) $lastDownloadFileContents = file($lastDownloadFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES); //Get the Last Downloaded season/episode into an array
+if(file_exists($showsToGetFile)) $showsToGetFileContents = file($showsToGetFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES); //Get the show feeds into an array
+else die("Failed to open: $showsToGetFile.  File doesn't exists.  Please put at least one rss feed in it and try again.");
 
 foreach($lastDownloadFileContents as $lastDownloadThisFeed){ //Loop through the last files downloaded for each feed and seperate the season and episode into an array
   $lastDownloadThisFeedArray[] = explode(" ", $lastDownloadThisFeed);
